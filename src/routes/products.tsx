@@ -86,7 +86,7 @@ function ProductsPage() {
   const hasActiveFilters = q !== "" || category !== "All" || inStock || maxPrice > 0 || sort !== "featured";
 
   const update = (patch: Partial<{ q: string; category: typeof category; inStock: boolean; maxPrice: number; sort: typeof sort }>) => {
-    navigate({ search: (prev) => ({ ...prev, ...patch }) });
+    navigate({ search: (prev: z.infer<typeof searchSchema>) => ({ ...prev, ...patch }) });
   };
 
   return (
