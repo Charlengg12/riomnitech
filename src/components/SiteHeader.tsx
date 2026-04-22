@@ -1,9 +1,18 @@
 import { Link } from "@tanstack/react-router";
-import { ShoppingCart, Menu, X } from "lucide-react";
+import { ShoppingCart, Menu, X, User, LayoutDashboard, LogOut } from "lucide-react";
 import { useState } from "react";
 import logo from "@/assets/rio-logo.jpg";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const nav = [
   { to: "/", label: "Home" },
@@ -14,6 +23,7 @@ const nav = [
 
 export function SiteHeader() {
   const { count, setOpen } = useCart();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -35,9 +45,18 @@ export function SiteHeader() {
               {n.label}
             </Link>
           ))}
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="text-sm font-medium text-primary hover:text-primary/80"
+              activeProps={{ className: "text-primary" }}
+            >
+              Admin
+            </Link>
+          )}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => setOpen(true)}
             className="relative inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-colors hover:bg-accent"
@@ -50,6 +69,52 @@ export function SiteHeader() {
               </span>
             )}
           </button>
+
+          {isAuthenticated ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground transition-colors hover:bg-accent"
+                  aria-label="Account menu"
+                >
+                  <User className="h-5 w-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold">{user?.name}</span>
+                    <span className="text-xs font-normal text-muted-foreground">{user?.email}</span>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/account" className="flex w-full cursor-pointer items-center gap-2">
+                    <User className="h-4 w-4" /> My account
+                  </Link>
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin" className="flex w-full cursor-pointer items-center gap-2">
+                      <LayoutDashboard className="h-4 w-4" /> Admin dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={logout} className="cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" /> Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link
+              to="/login"
+              className="hidden h-10 items-center justify-center rounded-full px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent sm:inline-flex"
+            >
+              Sign in
+            </Link>
+          )}
+
           <button
             onClick={() => setMobileOpen((v) => !v)}
             className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-accent md:hidden"
@@ -73,9 +138,28 @@ export function SiteHeader() {
                 {n.label}
               </Link>
             ))}
-            <Button asChild className="mt-2">
-              <Link to="/products" onClick={() => setMobileOpen(false)}>Browse Shop</Link>
-            </Button>
+            {isAdmin && (
+              <Link to="/admin" onClick={() => setMobileOpen(false)} className="py-3 text-sm font-medium text-primary">
+                Admin
+              </Link>
+            )}
+            {isAuthenticated ? (
+              <>
+                <Link to="/account" onClick={() => setMobileOpen(false)} className="py-3 text-sm font-medium text-foreground">
+                  My account
+                </Link>
+                <button
+                  onClick={() => { setMobileOpen(false); logout(); }}
+                  className="py-3 text-left text-sm font-medium text-muted-foreground"
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <Button asChild className="mt-2">
+                <Link to="/login" onClick={() => setMobileOpen(false)}>Sign in</Link>
+              </Button>
+            )}
           </nav>
         </div>
       )}
