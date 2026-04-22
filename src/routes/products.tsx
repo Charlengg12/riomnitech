@@ -13,11 +13,11 @@ const sortOptions = ["featured", "price-asc", "price-desc", "name"] as const;
 type SortOption = (typeof sortOptions)[number];
 
 type ProductSearch = {
-  q: string;
-  category: Category;
-  inStock: boolean;
-  maxPrice: number;
-  sort: SortOption;
+  q?: string;
+  category?: Category;
+  inStock?: boolean;
+  maxPrice?: number;
+  sort?: SortOption;
 };
 
 export const Route = createFileRoute("/products")({
