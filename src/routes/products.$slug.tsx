@@ -82,7 +82,7 @@ function ProductDetail() {
 
           {product.highlights && product.highlights.length > 0 && (
             <ul className="mt-6 space-y-2 text-sm">
-              {product.highlights.map((h) => (
+              {product.highlights.map((h: string) => (
                 <li key={h} className="flex items-start gap-2.5">
                   <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
                   <span>{h}</span>
@@ -127,7 +127,7 @@ function ProductDetail() {
               {Object.entries(product.specs).map(([key, value]) => (
                 <div key={key} className="grid grid-cols-1 gap-1 px-5 py-4 sm:grid-cols-3 sm:gap-4 sm:px-6">
                   <dt className="text-sm font-medium text-muted-foreground">{key}</dt>
-                  <dd className="text-sm sm:col-span-2">{value}</dd>
+                  <dd className="text-sm sm:col-span-2">{String(value)}</dd>
                 </div>
               ))}
             </dl>
@@ -139,7 +139,7 @@ function ProductDetail() {
         <section className="mt-20">
           <h2 className="text-2xl font-semibold tracking-tight">You may also like</h2>
           <div className="mt-6 grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
-            {related.map((p) => (
+            {related.map((p: Product) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
