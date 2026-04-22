@@ -8,6 +8,10 @@ export type Product = {
   description: string;
   badge?: string;
   inStock: boolean;
+  stockCount?: number;
+  sku?: string;
+  highlights?: string[];
+  specs?: Record<string, string>;
 };
 
 export const products: Product[] = [
