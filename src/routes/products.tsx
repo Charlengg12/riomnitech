@@ -47,7 +47,7 @@ export const Route = createFileRoute("/products")({
 const PRICE_CEILING = Math.ceil(Math.max(...products.map((p) => p.price)) / 50) * 50;
 
 function ProductsPage() {
-  const { q, category, inStock, maxPrice, sort } = Route.useSearch();
+  const { q = "", category = "All", inStock = false, maxPrice = 0, sort = "featured" } = Route.useSearch();
   const navigate = useNavigate({ from: "/products" });
 
   const effectiveMax = maxPrice > 0 ? maxPrice : PRICE_CEILING;
