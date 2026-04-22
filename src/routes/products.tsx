@@ -94,7 +94,18 @@ function ProductsPage() {
     return map;
   }, []);
 
+  const defaultSearch: ProductSearch = { q: "", category: "All", inStock: false, maxPrice: 0, sort: "featured" };
   const hasActiveFilters = q !== "" || category !== "All" || inStock || maxPrice > 0 || sort !== "featured";
+
+  const activeChips: { key: string; label: string; onRemove: () => void }[] = [];
+  if (q) activeChips.push({ key: "q", label: `Search: "${q}"`, onRemove: () => update({ q: "" }) });
+  if (category !== "All") activeChips.push({ key: "category", label: category, onRemove: () => update({ category: "All" }) });
+  if (inStock) activeChips.push({ key: "inStock", label: "In stock only", onRemove: () => update({ inStock: false }) });
+  if (maxPrice > 0) activeChips.push({ key: "maxPrice", label: `Under $${maxPrice}`, onRemove: () => update({ maxPrice: 0 }) });
+  if (sort !== "featured") {
+    const sortLabels: Record<SortOption, string> = { featured: "Featured", "price-asc": "Price ↑", "price-desc": "Price ↓", name: "Name" };
+    activeChips.push({ key: "sort", label: `Sort: ${sortLabels[sort]}`, onRemove: () => update({ sort: "featured" }) });
+  }
 
   const update = (patch: Partial<{ q: string; category: typeof category; inStock: boolean; maxPrice: number; sort: typeof sort }>) => {
     navigate({ search: (prev: ProductSearch) => ({ ...prev, ...patch }) });
