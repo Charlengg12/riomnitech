@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { products } from "@/data/products";
+import ogShop from "@/assets/og-shop.jpg";
 
 const categories = ["All", "Microcontrollers", "Sensors", "Robotics Kits", "Components", "Tools"] as const;
 type Category = (typeof categories)[number];
@@ -35,11 +36,17 @@ export const Route = createFileRoute("/products")({
   },
   head: () => ({
     meta: [
-      { title: "Shop — RIO" },
-      { name: "description", content: "Browse robotics kits, microcontrollers, sensors, components and tools at RIO." },
-      { property: "og:title", content: "Shop — RIO" },
-      { property: "og:description", content: "Browse robotics kits, microcontrollers, sensors and tools." },
+      { title: "Shop robotics, microcontrollers & sensors — RIO" },
+      { name: "description", content: "Explore the full RIO catalog: engineering-grade microcontrollers, sensors, robotics kits, components and tools — tested and supported by working engineers." },
+      { name: "keywords", content: "robotics, microcontrollers, sensors, robotics kits, electronics components, maker tools, RIO" },
+      { property: "og:title", content: "Shop robotics, microcontrollers & sensors — RIO" },
+      { property: "og:description", content: "Engineering-grade robotics, microcontrollers, sensors and tools — the full RIO catalog." },
+      { property: "og:type", content: "website" },
+      { property: "og:image", content: ogShop },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: ogShop },
     ],
+    links: [{ rel: "canonical", href: "/products" }],
   }),
   component: ProductsPage,
 });
