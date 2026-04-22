@@ -254,7 +254,7 @@ function ProductsPage() {
               <Button
                 variant="outline"
                 className="mt-6"
-                onClick={() => navigate({ search: { q: "", category: "All", inStock: false, maxPrice: 0, sort: "featured" } })}
+                onClick={resetAll}
               >
                 Reset filters
               </Button>
