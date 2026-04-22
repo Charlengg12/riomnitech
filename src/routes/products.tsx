@@ -1,8 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { Search, X } from "lucide-react";
-import { zodValidator, fallback } from "@tanstack/zod-adapter";
-import { z } from "zod";
 import { ProductCard } from "@/components/ProductCard";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,18 +8,31 @@ import { Button } from "@/components/ui/button";
 import { products } from "@/data/products";
 
 const categories = ["All", "Microcontrollers", "Sensors", "Robotics Kits", "Components", "Tools"] as const;
+type Category = (typeof categories)[number];
 const sortOptions = ["featured", "price-asc", "price-desc", "name"] as const;
+type SortOption = (typeof sortOptions)[number];
 
-const searchSchema = z.object({
-  q: fallback(z.string(), "").default(""),
-  category: fallback(z.enum(categories), "All").default("All"),
-  inStock: fallback(z.boolean(), false).default(false),
-  maxPrice: fallback(z.number().nonnegative(), 0).default(0),
-  sort: fallback(z.enum(sortOptions), "featured").default("featured"),
-});
+type ProductSearch = {
+  q: string;
+  category: Category;
+  inStock: boolean;
+  maxPrice: number;
+  sort: SortOption;
+};
 
 export const Route = createFileRoute("/products")({
-  validateSearch: zodValidator(searchSchema),
+  validateSearch: (search: Record<string, unknown>): ProductSearch => {
+    const cat = search.category as Category;
+    const sort = search.sort as SortOption;
+    const maxPrice = Number(search.maxPrice);
+    return {
+      q: typeof search.q === "string" ? search.q : "",
+      category: (categories as readonly string[]).includes(cat) ? cat : "All",
+      inStock: search.inStock === true || search.inStock === "true",
+      maxPrice: Number.isFinite(maxPrice) && maxPrice >= 0 ? maxPrice : 0,
+      sort: (sortOptions as readonly string[]).includes(sort) ? sort : "featured",
+    };
+  },
   head: () => ({
     meta: [
       { title: "Shop — RIO" },
@@ -86,7 +97,7 @@ function ProductsPage() {
   const hasActiveFilters = q !== "" || category !== "All" || inStock || maxPrice > 0 || sort !== "featured";
 
   const update = (patch: Partial<{ q: string; category: typeof category; inStock: boolean; maxPrice: number; sort: typeof sort }>) => {
-    navigate({ search: (prev: z.infer<typeof searchSchema>) => ({ ...prev, ...patch }) });
+    navigate({ search: (prev: ProductSearch) => ({ ...prev, ...patch }) });
   };
 
   return (
