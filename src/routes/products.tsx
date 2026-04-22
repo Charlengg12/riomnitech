@@ -198,20 +198,36 @@ function ProductsPage() {
           </div>
 
           {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate({ search: { q: "", category: "All", inStock: false, maxPrice: 0, sort: "featured" } })}
-              className="gap-1.5"
-            >
+            <Button variant="ghost" size="sm" onClick={resetAll} className="gap-1.5">
               <X className="h-3.5 w-3.5" />
-              Clear all
+              Clear all filters
             </Button>
           )}
         </aside>
 
         {/* Results */}
         <div>
+          {activeChips.length > 0 && (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active:</span>
+              {activeChips.map((chip) => (
+                <button
+                  key={chip.key}
+                  onClick={chip.onRemove}
+                  className="group inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground transition-colors hover:border-foreground hover:bg-foreground hover:text-background"
+                >
+                  {chip.label}
+                  <X className="h-3 w-3 opacity-60 group-hover:opacity-100" />
+                </button>
+              ))}
+              <button
+                onClick={resetAll}
+                className="ml-1 text-xs font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
             <p className="text-sm text-muted-foreground">
               {filtered.length} {filtered.length === 1 ? "product" : "products"}
