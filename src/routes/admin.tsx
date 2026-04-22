@@ -6,9 +6,11 @@ import { useAuth } from "@/context/AuthContext";
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
-      { title: "Admin — RIO" },
-      { name: "description", content: "RIO admin dashboard — manage products, orders, and traffic." },
-      { name: "robots", content: "noindex, nofollow" },
+      { title: "Admin dashboard — RIO" },
+      { name: "description", content: "RIO admin dashboard — manage products, fulfill orders, and monitor store traffic." },
+      { name: "robots", content: "noindex, nofollow, noarchive" },
+      { property: "og:title", content: "Admin dashboard — RIO" },
+      { property: "og:description", content: "Internal RIO admin tools for catalog and order management." },
     ],
   }),
   component: AdminLayout,

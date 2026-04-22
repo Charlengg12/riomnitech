@@ -9,7 +9,11 @@ export const Route = createFileRoute("/account")({
   head: () => ({
     meta: [
       { title: "My account — RIO" },
-      { name: "description", content: "Your RIO account — orders, profile, and shipping details." },
+      { name: "description", content: "Your RIO account — view orders, manage your profile, and track shipping for every robotics build." },
+      { name: "robots", content: "noindex, nofollow" },
+      { property: "og:title", content: "My account — RIO" },
+      { property: "og:description", content: "Manage your RIO orders, profile, and shipping details in one place." },
+      { property: "og:type", content: "website" },
     ],
   }),
   component: AccountPage,
