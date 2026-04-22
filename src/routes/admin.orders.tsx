@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { getOrders, saveOrders, type Order, type OrderStatus } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -87,8 +87,8 @@ function AdminOrders() {
           </thead>
           <tbody>
             {visible.map((o) => (
-              <>
-                <tr key={o.id} className="border-t border-border">
+              <Fragment key={o.id}>
+                <tr className="border-t border-border">
                   <td className="px-4 py-3">
                     <button onClick={() => setExpanded(expanded === o.id ? null : o.id)} className="font-mono text-xs font-semibold text-foreground hover:underline">
                       {o.id}
@@ -116,7 +116,7 @@ function AdminOrders() {
                   </td>
                 </tr>
                 {expanded === o.id && (
-                  <tr key={`${o.id}-detail`} className="border-t border-border bg-secondary/20">
+                  <tr className="border-t border-border bg-secondary/20">
                     <td colSpan={6} className="px-4 py-4">
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Line items</p>
                       <ul className="space-y-1 text-sm">
@@ -130,7 +130,7 @@ function AdminOrders() {
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
             {visible.length === 0 && (
               <tr>
