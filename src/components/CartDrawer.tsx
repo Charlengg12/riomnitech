@@ -56,7 +56,9 @@ export function CartDrawer() {
                 <span className="text-lg font-semibold">${subtotal.toFixed(2)}</span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">Shipping & taxes calculated at checkout.</p>
-              <Button className="mt-4 w-full" size="lg">Checkout</Button>
+              <Button asChild className="mt-4 w-full" size="lg" onClick={() => setOpen(false)}>
+                <Link to="/checkout">Checkout</Link>
+              </Button>
             </div>
           </>
         )}
