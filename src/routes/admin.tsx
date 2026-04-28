@@ -23,18 +23,19 @@ const tabs = [
 ] as const;
 
 function AdminLayout() {
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (loading) return;
     if (!isAuthenticated) {
       navigate({ to: "/login", search: { redirect: "/admin" } });
     } else if (!isAdmin) {
       navigate({ to: "/account" });
     }
-  }, [isAuthenticated, isAdmin, navigate]);
+  }, [isAuthenticated, isAdmin, loading, navigate]);
 
-  if (!isAuthenticated || !isAdmin) {
+  if (loading || !isAuthenticated || !isAdmin) {
     return (
       <div className="mx-auto max-w-md px-5 py-24 text-center">
         <p className="text-sm text-muted-foreground">Checking access…</p>

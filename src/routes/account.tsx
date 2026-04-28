@@ -28,17 +28,18 @@ const statusStyles: Record<Order["status"], string> = {
 };
 
 function AccountPage() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, loading, logout } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
+    if (loading) return;
     if (!isAuthenticated) {
       navigate({ to: "/login", search: { redirect: "/account" } });
       return;
     }
     setOrders(getOrders());
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, loading, navigate]);
 
   const myOrders = useMemo(
     () => orders.filter((o) => user && o.userEmail.toLowerCase() === user.email.toLowerCase()),
