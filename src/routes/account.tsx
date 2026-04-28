@@ -28,17 +28,18 @@ const statusStyles: Record<Order["status"], string> = {
 };
 
 function AccountPage() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, loading, logout } = useAuth();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
+    if (loading) return;
     if (!isAuthenticated) {
       navigate({ to: "/login", search: { redirect: "/account" } });
       return;
     }
     setOrders(getOrders());
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, loading, navigate]);
 
   const myOrders = useMemo(
     () => orders.filter((o) => user && o.userEmail.toLowerCase() === user.email.toLowerCase()),
@@ -57,7 +58,7 @@ function AccountPage() {
           </h1>
           <p className="mt-2 text-muted-foreground">Manage your orders, profile, and preferences.</p>
         </div>
-        <Button variant="outline" onClick={() => { logout(); navigate({ to: "/" }); }} className="gap-2">
+        <Button variant="outline" onClick={() => { void logout(); navigate({ to: "/" }); }} className="gap-2">
           <LogOut className="h-4 w-4" /> Sign out
         </Button>
       </header>

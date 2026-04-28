@@ -101,7 +101,7 @@ export function SiteHeader() {
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => { void logout(); }} className="cursor-pointer">
                   <LogOut className="mr-2 h-4 w-4" /> Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -149,7 +149,7 @@ export function SiteHeader() {
                   My account
                 </Link>
                 <button
-                  onClick={() => { setMobileOpen(false); logout(); }}
+                  onClick={() => { setMobileOpen(false); void logout(); }}
                   className="py-3 text-left text-sm font-medium text-muted-foreground"
                 >
                   Sign out

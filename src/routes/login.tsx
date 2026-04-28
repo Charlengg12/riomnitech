@@ -1,5 +1,5 @@
-import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,16 +11,6 @@ export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>): LoginSearch => ({
     redirect: typeof search.redirect === "string" ? search.redirect : undefined,
   }),
-  beforeLoad: () => {
-    if (typeof window !== "undefined") {
-      try {
-        const raw = localStorage.getItem("rio.session");
-        if (raw) throw redirect({ to: "/account" });
-      } catch (e) {
-        if (e && typeof e === "object" && "isRedirect" in e) throw e;
-      }
-    }
-  },
   head: () => ({
     meta: [
       { title: "Sign in — RIO" },
@@ -31,13 +21,17 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { login } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const search = Route.useSearch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) navigate({ to: search.redirect ?? "/account" });
+  }, [isAuthenticated, navigate, search.redirect]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -83,10 +77,6 @@ function LoginPage() {
         </Link>
       </p>
 
-      <div className="mt-6 rounded-xl border border-dashed border-border bg-secondary/30 p-4 text-xs text-muted-foreground">
-        <p className="font-semibold text-foreground">Demo admin</p>
-        <p>admin@rio.dev / admin123</p>
-      </div>
     </div>
   );
 }

@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 
 export type Role = "user" | "admin";
 
@@ -10,99 +12,87 @@ export type AuthUser = {
   createdAt: string;
 };
 
-type StoredUser = AuthUser & { password: string };
-
 type AuthCtx = {
   user: AuthUser | null;
+  loading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 };
 
 const Ctx = createContext<AuthCtx | null>(null);
-const USERS_KEY = "rio.users";
-const SESSION_KEY = "rio.session";
 
-function readUsers(): StoredUser[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(USERS_KEY);
-    if (raw) return JSON.parse(raw) as StoredUser[];
-  } catch {
-    /* ignore */
-  }
-  // seed with a demo admin so the user can immediately access the admin page
-  const seed: StoredUser[] = [
-    {
-      id: "admin-seed",
-      email: "admin@rio.dev",
-      name: "RIO Admin",
-      role: "admin",
-      password: "admin123",
-      createdAt: new Date().toISOString(),
-    },
-  ];
-  localStorage.setItem(USERS_KEY, JSON.stringify(seed));
-  return seed;
-}
+async function loadUser(session: Session | null): Promise<AuthUser | null> {
+  if (!session?.user) return null;
+  const u = session.user;
 
-function writeUsers(u: StoredUser[]) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(u));
-}
+  const [{ data: profile }, { data: roles }] = await Promise.all([
+    supabase.from("profiles").select("name, email, created_at").eq("id", u.id).maybeSingle(),
+    supabase.from("user_roles").select("role").eq("user_id", u.id),
+  ]);
 
-function stripPassword({ password: _p, ...rest }: StoredUser): AuthUser {
-  return rest;
+  const isAdmin = (roles ?? []).some((r) => r.role === "admin");
+
+  return {
+    id: u.id,
+    email: profile?.email ?? u.email ?? "",
+    name: profile?.name ?? (u.user_metadata?.name as string | undefined) ?? (u.email?.split("@")[0] ?? "User"),
+    role: isAdmin ? "admin" : "user",
+    createdAt: profile?.created_at ?? u.created_at ?? new Date().toISOString(),
+  };
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    readUsers(); // ensure seed
-    try {
-      const raw = localStorage.getItem(SESSION_KEY);
-      if (raw) setUser(JSON.parse(raw) as AuthUser);
-    } catch {
-      /* ignore */
-    }
+    // Listener FIRST, then initial session check
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Defer Supabase calls so we don't block the auth callback
+      setTimeout(() => {
+        loadUser(session).then(setUser);
+      }, 0);
+    });
+
+    supabase.auth.getSession().then(({ data }) => {
+      loadUser(data.session).then((u) => {
+        setUser(u);
+        setLoading(false);
+      });
+    });
+
+    return () => sub.subscription.unsubscribe();
   }, []);
 
-  const persist = (u: AuthUser | null) => {
-    setUser(u);
-    if (u) localStorage.setItem(SESSION_KEY, JSON.stringify(u));
-    else localStorage.removeItem(SESSION_KEY);
-  };
-
   const login: AuthCtx["login"] = async (email, password) => {
-    const users = readUsers();
-    const found = users.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
-    if (!found) throw new Error("Invalid email or password");
-    persist(stripPassword(found));
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
   };
 
   const signup: AuthCtx["signup"] = async (name, email, password) => {
-    const users = readUsers();
-    if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
-      throw new Error("An account with that email already exists");
-    }
-    const next: StoredUser = {
-      id: crypto.randomUUID(),
-      name,
+    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/account` : undefined;
+    const { error } = await supabase.auth.signUp({
       email,
-      role: "user",
       password,
-      createdAt: new Date().toISOString(),
-    };
-    writeUsers([...users, next]);
-    persist(stripPassword(next));
+      options: {
+        data: { name },
+        emailRedirectTo: redirectTo,
+      },
+    });
+    if (error) throw new Error(error.message);
   };
 
-  const logout = () => persist(null);
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
 
   const value: AuthCtx = {
     user,
+    loading,
     isAuthenticated: !!user,
     isAdmin: user?.role === "admin",
     login,
