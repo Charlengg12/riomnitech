@@ -24,7 +24,14 @@ export const Route = createFileRoute("/admin")({
   component: AdminLayout,
 });
 
-const sections = [
+type NavItem = {
+  to: "/admin" | "/admin/products" | "/admin/orders" | "/admin/categories" | "/admin/customers" | "/admin/coupons" | "/admin/promotions" | "/admin/inquiries";
+  label: string;
+  icon: typeof LayoutDashboard;
+  exact: boolean;
+};
+
+const sections: { label: string; items: NavItem[] }[] = [
   {
     label: "Overview",
     items: [
@@ -53,7 +60,7 @@ const sections = [
       { to: "/admin/inquiries", label: "Inquiries", icon: MessageSquare, exact: false },
     ],
   },
-] as const;
+];
 
 function AdminLayout() {
   const { isAuthenticated, isAdmin, loading } = useAuth();
