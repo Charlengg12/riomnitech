@@ -58,7 +58,7 @@ function AccountPage() {
           </h1>
           <p className="mt-2 text-muted-foreground">Manage your orders, profile, and preferences.</p>
         </div>
-        <Button variant="outline" onClick={() => { logout(); navigate({ to: "/" }); }} className="gap-2">
+        <Button variant="outline" onClick={() => { void logout(); navigate({ to: "/" }); }} className="gap-2">
           <LogOut className="h-4 w-4" /> Sign out
         </Button>
       </header>
