@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 
 type LoginSearch = { redirect?: string };
 
@@ -68,6 +69,11 @@ function LoginPage() {
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? "Signing in…" : "Sign in"}
         </Button>
+        <div className="relative py-2">
+          <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border" /></div>
+          <div className="relative flex justify-center"><span className="bg-background px-2 text-xs text-muted-foreground">or</span></div>
+        </div>
+        <GoogleSignInButton label="Sign in with Google" />
       </form>
 
       <p className="mt-4 text-center text-sm text-muted-foreground">
