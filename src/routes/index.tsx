@@ -3,7 +3,9 @@ import { ArrowRight, Cpu, Bot, Zap, ShieldCheck, Sparkles, Code2, Rocket, Wrench
 import hero from "@/assets/hero-robotics.jpg";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/ProductCard";
-import { products } from "@/data/products";
+import { useEffect, useState } from "react";
+import type { Product } from "@/data/products";
+import { fetchProducts } from "@/lib/db";
 import { Reveal } from "@/components/Reveal";
 import { useParallax } from "@/hooks/useScrollReveal";
 
