@@ -1,5 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { products, type Product } from "@/data/products";
+import { type Product } from "@/data/products";
+import { fetchProductBySlug, fetchRelatedProducts } from "@/lib/db";
 import { useCart } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Check, Truck, ShieldCheck, RotateCcw, Package } from "lucide-react";
@@ -7,12 +8,10 @@ import { useState } from "react";
 import { ProductCard } from "@/components/ProductCard";
 
 export const Route = createFileRoute("/products/$slug")({
-  loader: ({ params }) => {
-    const product = products.find((p) => p.slug === params.slug);
+  loader: async ({ params }) => {
+    const product = await fetchProductBySlug(params.slug);
     if (!product) throw notFound();
-    const related = products
-      .filter((p) => p.category === product.category && p.id !== product.id)
-      .slice(0, 4);
+    const related = await fetchRelatedProducts(product.category, product.id, 4);
     return { product, related };
   },
   head: ({ loaderData }) => ({
@@ -28,6 +27,13 @@ export const Route = createFileRoute("/products/$slug")({
       : [],
   }),
   component: ProductDetail,
+  errorComponent: ({ error }) => (
+    <div className="mx-auto max-w-3xl px-5 py-24 text-center">
+      <h1 className="text-3xl font-semibold">Couldn't load product</h1>
+      <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
+      <Link to="/products" className="mt-4 inline-block text-primary">← Back to shop</Link>
+    </div>
+  ),
   notFoundComponent: () => (
     <div className="mx-auto max-w-3xl px-5 py-24 text-center">
       <h1 className="text-3xl font-semibold">Product not found</h1>
