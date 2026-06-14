@@ -80,6 +80,7 @@ function RootComponent() {
           </main>
           <SiteFooter />
           <CartDrawer />
+          <Toaster />
         </div>
       </CartProvider>
     </AuthProvider>
