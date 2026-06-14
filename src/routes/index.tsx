@@ -42,8 +42,12 @@ const workflow = [
 ];
 
 function HomePage() {
-  const featured = products.slice(0, 4);
+  const [featured, setFeatured] = useState<Product[]>([]);
   const parallaxY = useParallax(0.18);
+
+  useEffect(() => {
+    fetchProducts().then((all) => setFeatured(all.slice(0, 4))).catch(() => undefined);
+  }, []);
 
   return (
     <>
