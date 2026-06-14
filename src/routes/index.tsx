@@ -3,7 +3,9 @@ import { ArrowRight, Cpu, Bot, Zap, ShieldCheck, Sparkles, Code2, Rocket, Wrench
 import hero from "@/assets/hero-robotics.jpg";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/ProductCard";
-import { products } from "@/data/products";
+import { useEffect, useState } from "react";
+import type { Product } from "@/data/products";
+import { fetchProducts } from "@/lib/db";
 import { Reveal } from "@/components/Reveal";
 import { useParallax } from "@/hooks/useScrollReveal";
 
@@ -40,8 +42,12 @@ const workflow = [
 ];
 
 function HomePage() {
-  const featured = products.slice(0, 4);
+  const [featured, setFeatured] = useState<Product[]>([]);
   const parallaxY = useParallax(0.18);
+
+  useEffect(() => {
+    fetchProducts().then((all) => setFeatured(all.slice(0, 4))).catch(() => undefined);
+  }, []);
 
   return (
     <>

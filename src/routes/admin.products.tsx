@@ -1,63 +1,87 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
-import { Plus, Pencil, Trash2, X } from "lucide-react";
-import { getProducts, saveProducts } from "@/lib/store";
+import { Plus, Pencil, Trash2, X, Loader2 } from "lucide-react";
 import type { Product } from "@/data/products";
+import { fetchProducts, upsertProduct, deleteProduct, fetchCategories, type Category } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/products")({
   component: AdminProducts,
 });
 
-const categories: Product["category"][] = ["Microcontrollers", "Sensors", "Robotics Kits", "Components", "Tools"];
+type Draft = Product;
 
-type Draft = Omit<Product, "highlights" | "specs"> & { highlights?: string[]; specs?: Record<string, string> };
-
-const empty = (): Draft => ({
+const empty = (defaultCategory: string): Draft => ({
   id: crypto.randomUUID(),
   slug: "",
   name: "",
-  category: "Components",
+  category: defaultCategory as Product["category"],
   price: 0,
   image: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80",
   description: "",
   inStock: true,
   stockCount: 0,
   sku: "",
+  highlights: [],
+  specs: {},
 });
 
 function AdminProducts() {
   const [items, setItems] = useState<Product[]>([]);
-  const [editing, setEditing] = useState<Draft | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [editing, setEditing] = useState<{ draft: Draft; isNew: boolean } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    setItems(getProducts());
-  }, []);
-
-  const persist = (next: Product[]) => {
-    setItems(next);
-    saveProducts(next);
+  const reload = async () => {
+    setLoading(true);
+    try {
+      const [p, c] = await Promise.all([fetchProducts(), fetchCategories()]);
+      setItems(p);
+      setCategories(c);
+    } catch (e) {
+      toast.error("Failed to load products", { description: (e as Error).message });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const onSubmit = (e: FormEvent) => {
+  useEffect(() => { reload(); }, []);
+
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!editing) return;
-    const exists = items.some((i) => i.id === editing.id);
-    const slug = editing.slug || editing.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    const next = exists
-      ? items.map((i) => (i.id === editing.id ? { ...editing, slug } : i))
-      : [{ ...editing, slug }, ...items];
-    persist(next);
-    setEditing(null);
+    const slug = editing.draft.slug || editing.draft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    setSaving(true);
+    try {
+      await upsertProduct({ ...editing.draft, slug }, editing.isNew);
+      toast.success(editing.isNew ? "Product created" : "Product updated");
+      setEditing(null);
+      reload();
+    } catch (err) {
+      toast.error("Save failed", { description: (err as Error).message });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const remove = (id: string) => {
+  const remove = async (id: string) => {
     if (!confirm("Delete this product?")) return;
-    persist(items.filter((i) => i.id !== id));
+    try {
+      await deleteProduct(id);
+      toast.success("Product deleted");
+      setItems((prev) => prev.filter((i) => i.id !== id));
+    } catch (err) {
+      toast.error("Delete failed", { description: (err as Error).message });
+    }
   };
+
+  const catNames = categories.length ? categories.map((c) => c.name) : ["Microcontrollers", "Sensors", "Robotics Kits", "Components", "Tools"];
+  const draft = editing?.draft;
 
   return (
     <div className="space-y-6">
@@ -66,7 +90,7 @@ function AdminProducts() {
           <h2 className="font-display text-xl font-semibold">Products</h2>
           <p className="text-sm text-muted-foreground">{items.length} items in catalog</p>
         </div>
-        <Button onClick={() => setEditing(empty())} className="gap-2">
+        <Button onClick={() => setEditing({ draft: empty(catNames[0]), isNew: true })} className="gap-2">
           <Plus className="h-4 w-4" /> Add product
         </Button>
       </div>
@@ -105,7 +129,7 @@ function AdminProducts() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => setEditing({ ...p })} aria-label="Edit">
+                    <Button size="icon" variant="ghost" onClick={() => setEditing({ draft: { ...p }, isNew: false })} aria-label="Edit">
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button size="icon" variant="ghost" onClick={() => remove(p.id)} aria-label="Delete">
@@ -117,14 +141,16 @@ function AdminProducts() {
             ))}
             {items.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">No products. Add your first.</td>
+                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground">
+                  {loading ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : "No products. Add your first."}
+                </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {editing && (
+      {editing && draft && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4 backdrop-blur-sm" onClick={() => setEditing(null)}>
           <form
             onClick={(e) => e.stopPropagation()}
@@ -133,7 +159,7 @@ function AdminProducts() {
           >
             <div className="flex items-center justify-between">
               <h3 className="font-display text-lg font-semibold">
-                {items.some((i) => i.id === editing.id) ? "Edit product" : "New product"}
+                {editing.isNew ? "New product" : "Edit product"}
               </h3>
               <button type="button" onClick={() => setEditing(null)} className="rounded-full p-1 hover:bg-accent">
                 <X className="h-4 w-4" />
@@ -143,51 +169,51 @@ function AdminProducts() {
             <div className="mt-5 space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" required value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
+                <Input id="name" required value={draft.name} onChange={(e) => setEditing({ ...editing, draft: { ...draft, name: e.target.value } })} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="price">Price (USD)</Label>
-                  <Input id="price" type="number" min={0} step="0.01" required value={editing.price}
-                    onChange={(e) => setEditing({ ...editing, price: Number(e.target.value) })} />
+                  <Input id="price" type="number" min={0} step="0.01" required value={draft.price}
+                    onChange={(e) => setEditing({ ...editing, draft: { ...draft, price: Number(e.target.value) } })} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="category">Category</Label>
                   <select
                     id="category"
-                    value={editing.category}
-                    onChange={(e) => setEditing({ ...editing, category: e.target.value as Product["category"] })}
+                    value={draft.category}
+                    onChange={(e) => setEditing({ ...editing, draft: { ...draft, category: e.target.value as Product["category"] } })}
                     className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
                   >
-                    {categories.map((c) => <option key={c}>{c}</option>)}
+                    {catNames.map((c) => <option key={c}>{c}</option>)}
                   </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="sku">SKU</Label>
-                  <Input id="sku" value={editing.sku ?? ""} onChange={(e) => setEditing({ ...editing, sku: e.target.value })} />
+                  <Input id="sku" value={draft.sku ?? ""} onChange={(e) => setEditing({ ...editing, draft: { ...draft, sku: e.target.value } })} />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="stock">Stock count</Label>
-                  <Input id="stock" type="number" min={0} value={editing.stockCount ?? 0}
-                    onChange={(e) => setEditing({ ...editing, stockCount: Number(e.target.value), inStock: Number(e.target.value) > 0 })} />
+                  <Input id="stock" type="number" min={0} value={draft.stockCount ?? 0}
+                    onChange={(e) => setEditing({ ...editing, draft: { ...draft, stockCount: Number(e.target.value), inStock: Number(e.target.value) > 0 } })} />
                 </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="image">Image URL</Label>
-                <Input id="image" required value={editing.image} onChange={(e) => setEditing({ ...editing, image: e.target.value })} />
+                <Input id="image" required value={draft.image} onChange={(e) => setEditing({ ...editing, draft: { ...draft, image: e.target.value } })} />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="desc">Description</Label>
-                <Textarea id="desc" rows={3} required value={editing.description}
-                  onChange={(e) => setEditing({ ...editing, description: e.target.value })} />
+                <Textarea id="desc" rows={3} required value={draft.description}
+                  onChange={(e) => setEditing({ ...editing, draft: { ...draft, description: e.target.value } })} />
               </div>
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
-                  checked={editing.inStock}
-                  onChange={(e) => setEditing({ ...editing, inStock: e.target.checked })}
+                  checked={draft.inStock}
+                  onChange={(e) => setEditing({ ...editing, draft: { ...draft, inStock: e.target.checked } })}
                   className="h-4 w-4 rounded border-input"
                 />
                 In stock
@@ -196,7 +222,7 @@ function AdminProducts() {
 
             <div className="mt-6 flex justify-end gap-2">
               <Button type="button" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
-              <Button type="submit">Save product</Button>
+              <Button type="submit" disabled={saving}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save product"}</Button>
             </div>
           </form>
         </div>

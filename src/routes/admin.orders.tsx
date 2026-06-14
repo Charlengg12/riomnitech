@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Fragment, useEffect, useState } from "react";
-import { Trash2 } from "lucide-react";
-import { getOrders, saveOrders, type Order, type OrderStatus } from "@/lib/store";
+import { Trash2, Loader2 } from "lucide-react";
+import { fetchOrders, updateOrderStatus, deleteOrder, type Order, type OrderStatus } from "@/lib/db";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/orders")({
   component: AdminOrders,
@@ -22,23 +23,39 @@ function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<OrderStatus | "all">("all");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setOrders(getOrders());
-  }, []);
-
-  const persist = (next: Order[]) => {
-    setOrders(next);
-    saveOrders(next);
+  const reload = async () => {
+    setLoading(true);
+    try {
+      setOrders(await fetchOrders());
+    } catch (e) {
+      toast.error("Failed to load orders", { description: (e as Error).message });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateStatus = (id: string, status: OrderStatus) => {
-    persist(orders.map((o) => (o.id === id ? { ...o, status } : o)));
+  useEffect(() => { reload(); }, []);
+
+  const updateStatus = async (id: string, status: OrderStatus) => {
+    try {
+      await updateOrderStatus(id, status);
+      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status } : o)));
+    } catch (e) {
+      toast.error("Update failed", { description: (e as Error).message });
+    }
   };
 
-  const remove = (id: string) => {
+  const remove = async (id: string) => {
     if (!confirm("Delete this order?")) return;
-    persist(orders.filter((o) => o.id !== id));
+    try {
+      await deleteOrder(id);
+      setOrders((prev) => prev.filter((o) => o.id !== id));
+      toast.success("Order deleted");
+    } catch (e) {
+      toast.error("Delete failed", { description: (e as Error).message });
+    }
   };
 
   const visible = filter === "all" ? orders : orders.filter((o) => o.status === filter);
@@ -91,11 +108,11 @@ function AdminOrders() {
                 <tr className="border-t border-border">
                   <td className="px-4 py-3">
                     <button onClick={() => setExpanded(expanded === o.id ? null : o.id)} className="font-mono text-xs font-semibold text-foreground hover:underline">
-                      {o.id}
+                      #{o.id.slice(0, 8)}
                     </button>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-medium">{o.userName}</p>
+                    <p className="font-medium">{o.userName || "—"}</p>
                     <p className="text-xs text-muted-foreground">{o.userEmail}</p>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{new Date(o.createdAt).toLocaleDateString()}</td>
@@ -120,8 +137,8 @@ function AdminOrders() {
                     <td colSpan={6} className="px-4 py-4">
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Line items</p>
                       <ul className="space-y-1 text-sm">
-                        {o.lines.map((l) => (
-                          <li key={l.productId} className="flex items-center justify-between">
+                        {o.lines.map((l, idx) => (
+                          <li key={idx} className="flex items-center justify-between">
                             <span>{l.qty} × {l.name}</span>
                             <span className="tabular-nums text-muted-foreground">${(l.qty * l.price).toFixed(2)}</span>
                           </li>
@@ -134,7 +151,9 @@ function AdminOrders() {
             ))}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">No orders for this filter</td>
+                <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                  {loading ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : "No orders for this filter"}
+                </td>
               </tr>
             )}
           </tbody>

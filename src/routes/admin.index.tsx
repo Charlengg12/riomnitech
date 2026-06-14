@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { DollarSign, ShoppingBag, Users, TrendingUp } from "lucide-react";
-import { getOrders, getProducts, type Order } from "@/lib/store";
+import { DollarSign, ShoppingBag, Users, TrendingUp, Loader2 } from "lucide-react";
+import { fetchOrders, fetchProducts, type Order } from "@/lib/db";
 import type { Product } from "@/data/products";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminOverview,
@@ -19,15 +20,18 @@ const statusColors: Record<Order["status"], string> = {
 function AdminOverview() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setOrders(getOrders());
-    setProducts(getProducts());
+    Promise.all([fetchOrders(), fetchProducts()])
+      .then(([o, p]) => { setOrders(o); setProducts(p); })
+      .catch((e) => toast.error("Failed to load overview", { description: (e as Error).message }))
+      .finally(() => setLoading(false));
   }, []);
 
   const stats = useMemo(() => {
     const revenue = orders.filter((o) => o.status !== "cancelled").reduce((s, o) => s + o.total, 0);
-    const customers = new Set(orders.map((o) => o.userEmail)).size;
+    const customers = new Set(orders.map((o) => o.userId ?? o.userEmail.toLowerCase())).size;
     const pending = orders.filter((o) => o.status === "pending" || o.status === "processing").length;
     return { revenue, customers, pending, orderCount: orders.length };
   }, [orders]);
@@ -36,10 +40,11 @@ function AdminOverview() {
     const counts = new Map<string, { name: string; qty: number; revenue: number }>();
     for (const o of orders) {
       for (const l of o.lines) {
-        const cur = counts.get(l.productId) ?? { name: l.name, qty: 0, revenue: 0 };
+        const key = l.productId ?? l.name;
+        const cur = counts.get(key) ?? { name: l.name, qty: 0, revenue: 0 };
         cur.qty += l.qty;
         cur.revenue += l.qty * l.price;
-        counts.set(l.productId, cur);
+        counts.set(key, cur);
       }
     }
     return [...counts.entries()]
@@ -48,7 +53,7 @@ function AdminOverview() {
       .slice(0, 5);
   }, [orders]);
 
-  const recent = orders.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5);
+  const recent = orders.slice(0, 5);
 
   const cards = [
     { label: "Revenue", value: `$${stats.revenue.toFixed(2)}`, icon: DollarSign, sub: "All-time" },
@@ -56,6 +61,10 @@ function AdminOverview() {
     { label: "Customers", value: stats.customers.toString(), icon: Users, sub: "Unique buyers" },
     { label: "Catalog", value: products.length.toString(), icon: TrendingUp, sub: `${products.filter((p) => p.inStock).length} in stock` },
   ];
+
+  if (loading) {
+    return <div className="flex h-48 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
 
   return (
     <div className="space-y-8">
@@ -91,8 +100,8 @@ function AdminOverview() {
               <tbody>
                 {recent.map((o) => (
                   <tr key={o.id} className="border-t border-border">
-                    <td className="px-3 py-2 font-mono text-xs">{o.id}</td>
-                    <td className="px-3 py-2">{o.userName}</td>
+                    <td className="px-3 py-2 font-mono text-xs">#{o.id.slice(0, 8)}</td>
+                    <td className="px-3 py-2">{o.userName || o.userEmail}</td>
                     <td className="px-3 py-2">
                       <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${statusColors[o.status]}`}>
                         {o.status}
