@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin, Phone, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
+import { createInquiry } from "@/lib/db";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -19,7 +22,33 @@ export const Route = createFileRoute("/contact")({
 });
 
 function ContactPage() {
+  const { user } = useAuth();
   const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    setSubmitting(true);
+    try {
+      await createInquiry({
+        name: String(data.get("name") || ""),
+        email: String(data.get("email") || ""),
+        subject: String(data.get("subject") || ""),
+        message: String(data.get("message") || ""),
+        userId: user?.id ?? null,
+      });
+      setSent(true);
+      form.reset();
+      toast.success("Message sent — we'll be in touch.");
+    } catch (err) {
+      toast.error("Failed to send", { description: (err as Error).message });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-6xl px-5 py-16 lg:px-8 lg:py-24">
       <p className="text-xs font-semibold uppercase tracking-wider text-primary">Contact</p>
@@ -30,21 +59,18 @@ function ContactPage() {
 
       <div className="mt-14 grid gap-12 lg:grid-cols-5">
         <div className="lg:col-span-3">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              setSent(true);
-            }}
-            className="grid gap-5"
-          >
+          <form onSubmit={submit} className="grid gap-5">
             <div className="grid gap-5 sm:grid-cols-2">
-              <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" required /></div>
-              <div className="grid gap-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" required /></div>
+              <div className="grid gap-2"><Label htmlFor="name">Name</Label><Input id="name" name="name" required defaultValue={user?.name ?? ""} /></div>
+              <div className="grid gap-2"><Label htmlFor="email">Email</Label><Input id="email" name="email" type="email" required defaultValue={user?.email ?? ""} /></div>
             </div>
-            <div className="grid gap-2"><Label htmlFor="subject">Subject</Label><Input id="subject" required /></div>
-            <div className="grid gap-2"><Label htmlFor="message">Message</Label><Textarea id="message" rows={6} required /></div>
+            <div className="grid gap-2"><Label htmlFor="subject">Subject</Label><Input id="subject" name="subject" required /></div>
+            <div className="grid gap-2"><Label htmlFor="message">Message</Label><Textarea id="message" name="message" rows={6} required /></div>
             <div className="flex items-center gap-4">
-              <Button type="submit" size="lg">Send message</Button>
+              <Button type="submit" size="lg" disabled={submitting}>
+                {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Send message
+              </Button>
               {sent && <span className="text-sm text-primary">Thanks — we'll be in touch.</span>}
             </div>
           </form>
